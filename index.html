@@ -115,27 +115,40 @@
         return el;
       };
 
-      // 6. window.location 프로퍼티를 poki.com으로 직접 스푸핑
-      // eval/Function 오버라이드보다 확실 — hostname을 읽는 모든 코드에 적용됨
+      // 6. Location.prototype으로 hostname 스푸핑 + href setter로 sitelock 이동 차단
+      // window.location 인스턴스 직접 defineProperty는 브라우저 보안상 실패할 수 있음
+      // Location.prototype에 정의해야 확실하게 동작함
       try {
-        Object.defineProperty(window.location, 'hostname', {
+        Object.defineProperty(Location.prototype, 'hostname', {
           get: function () { return 'poki.com'; },
           configurable: true
         });
-        Object.defineProperty(window.location, 'host', {
+        Object.defineProperty(Location.prototype, 'host', {
           get: function () { return 'poki.com'; },
           configurable: true
         });
-        Object.defineProperty(window.location, 'origin', {
+        Object.defineProperty(Location.prototype, 'origin', {
           get: function () { return 'https://poki.com'; },
           configurable: true
         });
-        Object.defineProperty(window.location, 'href', {
+        Object.defineProperty(Location.prototype, 'href', {
           get: function () { return 'https://poki.com/en/g/lands-of-blight'; },
+          set: function (url) { if (isPoki(url)) return; /* poki sitelock 이동 차단 */ },
           configurable: true
         });
+        // Location.prototype 레벨에서도 assign/replace 차단 (인스턴스 오버라이드 백업)
+        var _origProtoAssign = Location.prototype.assign;
+        Location.prototype.assign = function (url) {
+          if (isPoki(url)) return;
+          _origProtoAssign.call(this, url);
+        };
+        var _origProtoReplace = Location.prototype.replace;
+        Location.prototype.replace = function (url) {
+          if (isPoki(url)) return;
+          _origProtoReplace.call(this, url);
+        };
       } catch (e) {
-        // 일부 환경에서 location 프로퍼티 재정의가 막힐 수 있음 — 무시
+        // 일부 환경에서 Location.prototype 재정의가 막힐 수 있음 — 무시
       }
     })();
   </script>

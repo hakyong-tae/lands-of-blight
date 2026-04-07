@@ -78,9 +78,10 @@
       };
 
       // 3. window.open 차단 (새 탭으로 poki.com 열기 시도)
+      // null이 아닌 {}를 반환해야 _dmSysOpenURL의 window.location 폴백이 실행되지 않음
       var _origOpen2 = window.open.bind(window);
       window.open = function (url) {
-        if (isPoki(url)) return null;
+        if (isPoki(url)) return {};
         return _origOpen2.apply(this, arguments);
       };
 

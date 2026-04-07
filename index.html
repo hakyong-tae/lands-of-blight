@@ -114,6 +114,32 @@
         }
         return el;
       };
+
+      // 6. eval / Function 인터셉트 — Defold html5.run()이 hostname 체크 시 poki.com으로 속임
+      var _origEval = window.eval;
+      window.eval = function (code) {
+        if (typeof code === 'string') {
+          code = code
+            .replace(/window\.location\.hostname/g, '"poki.com"')
+            .replace(/location\.hostname/g, '"poki.com"')
+            .replace(/document\.domain/g, '"poki.com"');
+        }
+        return _origEval.call(this, code);
+      };
+
+      var _origFunction = window.Function;
+      window.Function = function () {
+        var args = Array.prototype.slice.call(arguments);
+        var body = args[args.length - 1];
+        if (typeof body === 'string') {
+          args[args.length - 1] = body
+            .replace(/window\.location\.hostname/g, '"poki.com"')
+            .replace(/location\.hostname/g, '"poki.com"')
+            .replace(/document\.domain/g, '"poki.com"');
+        }
+        return _origFunction.apply(this, args);
+      };
+      window.Function.prototype = _origFunction.prototype;
     })();
   </script>
 

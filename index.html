@@ -31,6 +31,13 @@
     @font-face { font-family: loadingFont; src: url(loading_font.ttf); }
   </style>
 
+  <!-- Service Worker: poki.com 요청 차단 -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
+  </script>
+
   <!-- PokiSDK Mock -->
   <script>
     window.PokiSDK = {

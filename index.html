@@ -31,11 +31,48 @@
     @font-face { font-family: loadingFont; src: url(loading_font.ttf); }
   </style>
 
-  <!-- Service Worker: poki.com 요청 차단 -->
+  <!-- poki.com 네트워크 요청 차단 (fetch + XHR 오버라이드, iframe 환경 포함) -->
   <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(() => {});
-    }
+    (function () {
+      var POKI_PATTERN = /poki\.(com|io)|poki-cdn\.com/i;
+      var MOCK_RESPONSE = '{"success":true}';
+
+      // fetch 오버라이드
+      var _origFetch = window.fetch.bind(window);
+      window.fetch = function (url) {
+        if (url && POKI_PATTERN.test(url.toString())) {
+          return Promise.resolve(new Response(MOCK_RESPONSE, {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' }
+          }));
+        }
+        return _origFetch.apply(this, arguments);
+      };
+
+      // XMLHttpRequest 오버라이드
+      var _origOpen = XMLHttpRequest.prototype.open;
+      var _origSend = XMLHttpRequest.prototype.send;
+      XMLHttpRequest.prototype.open = function (method, url) {
+        this._pokiBlocked = url && POKI_PATTERN.test(url.toString());
+        if (!this._pokiBlocked) {
+          _origOpen.apply(this, arguments);
+        }
+      };
+      XMLHttpRequest.prototype.send = function () {
+        if (this._pokiBlocked) {
+          var self = this;
+          setTimeout(function () {
+            Object.defineProperty(self, 'readyState', { get: function () { return 4; } });
+            Object.defineProperty(self, 'status',    { get: function () { return 200; } });
+            Object.defineProperty(self, 'responseText', { get: function () { return MOCK_RESPONSE; } });
+            if (self.onreadystatechange) self.onreadystatechange();
+            if (self.onload) self.onload();
+          }, 0);
+          return;
+        }
+        _origSend.apply(this, arguments);
+      };
+    })();
   </script>
 
   <!-- PokiSDK Mock -->

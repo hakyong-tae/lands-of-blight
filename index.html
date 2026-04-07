@@ -115,31 +115,28 @@
         return el;
       };
 
-      // 6. eval / Function 인터셉트 — Defold html5.run()이 hostname 체크 시 poki.com으로 속임
-      var _origEval = window.eval;
-      window.eval = function (code) {
-        if (typeof code === 'string') {
-          code = code
-            .replace(/window\.location\.hostname/g, '"poki.com"')
-            .replace(/location\.hostname/g, '"poki.com"')
-            .replace(/document\.domain/g, '"poki.com"');
-        }
-        return _origEval.call(this, code);
-      };
-
-      var _origFunction = window.Function;
-      window.Function = function () {
-        var args = Array.prototype.slice.call(arguments);
-        var body = args[args.length - 1];
-        if (typeof body === 'string') {
-          args[args.length - 1] = body
-            .replace(/window\.location\.hostname/g, '"poki.com"')
-            .replace(/location\.hostname/g, '"poki.com"')
-            .replace(/document\.domain/g, '"poki.com"');
-        }
-        return _origFunction.apply(this, args);
-      };
-      window.Function.prototype = _origFunction.prototype;
+      // 6. window.location 프로퍼티를 poki.com으로 직접 스푸핑
+      // eval/Function 오버라이드보다 확실 — hostname을 읽는 모든 코드에 적용됨
+      try {
+        Object.defineProperty(window.location, 'hostname', {
+          get: function () { return 'poki.com'; },
+          configurable: true
+        });
+        Object.defineProperty(window.location, 'host', {
+          get: function () { return 'poki.com'; },
+          configurable: true
+        });
+        Object.defineProperty(window.location, 'origin', {
+          get: function () { return 'https://poki.com'; },
+          configurable: true
+        });
+        Object.defineProperty(window.location, 'href', {
+          get: function () { return 'https://poki.com/en/g/lands-of-blight'; },
+          configurable: true
+        });
+      } catch (e) {
+        // 일부 환경에서 location 프로퍼티 재정의가 막힐 수 있음 — 무시
+      }
     })();
   </script>
 

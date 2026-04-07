@@ -68,7 +68,6 @@
 
   <script id="prepare-html" type="text/javascript">
     if (!window.game_data) { window.game_data = {}; }
-    window.game_data.game_target = "poki";
   </script>
 
   <script id="engine-setup" type="text/javascript">
@@ -159,18 +158,5 @@
     EngineLoader.load("canvas", "Landsofblight");
   </script>
 
-  <script id="poki-sdk-setup" type="text/javascript">
-    PokiSDK.gameLoadingStart();
-    var data = {};
-    var isLoadFinished = false;
-    Progress.addListener(function(percentage) {
-      data.percentageDone = percentage / 100;
-      if (!isLoadFinished) PokiSDK.gameLoadingProgress(data);
-      if (percentage == 100 && !isLoadFinished) {
-        PokiSDK.gameLoadingFinished();
-        isLoadFinished = true;
-      }
-    });
-  </script>
 </body>
 </html>

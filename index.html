@@ -31,16 +31,20 @@
     @font-face { font-family: loadingFont; src: url(loading_font.ttf); }
   </style>
 
-  <!-- poki.com 네트워크 요청 차단 (fetch + XHR 오버라이드, iframe 환경 포함) -->
+  <!-- poki.com 모든 접근 차단 (fetch / XHR / window.open / location 이동 포함) -->
   <script>
     (function () {
       var POKI_PATTERN = /poki\.(com|io)|poki-cdn\.com/i;
       var MOCK_RESPONSE = '{"success":true}';
 
-      // fetch 오버라이드
+      function isPoki(url) {
+        return url && POKI_PATTERN.test(url.toString());
+      }
+
+      // 1. fetch 오버라이드
       var _origFetch = window.fetch.bind(window);
       window.fetch = function (url) {
-        if (url && POKI_PATTERN.test(url.toString())) {
+        if (isPoki(url)) {
           return Promise.resolve(new Response(MOCK_RESPONSE, {
             status: 200,
             headers: { 'Content-Type': 'application/json' }
@@ -49,11 +53,11 @@
         return _origFetch.apply(this, arguments);
       };
 
-      // XMLHttpRequest 오버라이드
+      // 2. XMLHttpRequest 오버라이드
       var _origOpen = XMLHttpRequest.prototype.open;
       var _origSend = XMLHttpRequest.prototype.send;
       XMLHttpRequest.prototype.open = function (method, url) {
-        this._pokiBlocked = url && POKI_PATTERN.test(url.toString());
+        this._pokiBlocked = isPoki(url);
         if (!this._pokiBlocked) {
           _origOpen.apply(this, arguments);
         }
@@ -71,6 +75,43 @@
           return;
         }
         _origSend.apply(this, arguments);
+      };
+
+      // 3. window.open 차단 (새 탭으로 poki.com 열기 시도)
+      var _origOpen2 = window.open.bind(window);
+      window.open = function (url) {
+        if (isPoki(url)) return null;
+        return _origOpen2.apply(this, arguments);
+      };
+
+      // 4. window.location.assign / replace 차단 (페이지 이동 시도)
+      var _origAssign = window.location.assign.bind(window.location);
+      var _origReplace = window.location.replace.bind(window.location);
+      window.location.assign = function (url) {
+        if (isPoki(url)) return;
+        _origAssign(url);
+      };
+      window.location.replace = function (url) {
+        if (isPoki(url)) return;
+        _origReplace(url);
+      };
+
+      // 5. 동적 <script> 삽입으로 poki SDK 로드 시도 차단
+      var _origCreate = document.createElement.bind(document);
+      document.createElement = function (tag) {
+        var el = _origCreate(tag);
+        if (tag.toLowerCase() === 'script') {
+          Object.defineProperty(el, 'src', {
+            set: function (val) {
+              if (isPoki(val)) return;
+              Object.getOwnPropertyDescriptor(HTMLScriptElement.prototype, 'src').set.call(el, val);
+            },
+            get: function () {
+              return Object.getOwnPropertyDescriptor(HTMLScriptElement.prototype, 'src').get.call(el);
+            }
+          });
+        }
+        return el;
       };
     })();
   </script>
